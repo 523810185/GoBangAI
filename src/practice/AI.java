@@ -1,5 +1,9 @@
 package practice;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 public class AI 
 {
 	private Board m_stCtx = null; 
@@ -38,6 +42,7 @@ public class AI
 			}
 			
 			DFS(0, true, alpha, beta);
+			AfterAISetChess();
 			if(!m_stCtx.IsEmptyPos(setX, setY))
 			{
 				System.out.println("AI DFS 逻辑错误！");
@@ -46,6 +51,41 @@ public class AI
 			{
 				m_stCtx.AIPutAt(setX, setY);
 			}
+		}
+	}
+	
+	/**
+	 * 启发式搜索的预处理节点
+	 * @author ziyangzhang
+	 *
+	 */
+	private class DFSNode
+	{
+		public int x, y;
+		public float score;
+		public DFSNode SetX(int x) { this.x = x; return this; }
+		public DFSNode SetY(int y) { this.y = y; return this; }
+		public DFSNode SetScore(float score) { this.score = score; return this; }
+	}
+	
+	private class DFSNodePool 
+	{
+		private List<DFSNode> m_arrPool = new ArrayList<>();
+		public void CheckIn(DFSNode node) 
+		{
+			m_arrPool.add(node);
+		}
+		public DFSNode CheckOut() 
+		{
+			if(m_arrPool.isEmpty()) 
+			{
+				DFSNode node = new DFSNode();
+				return node;
+			}
+			
+			DFSNode node = m_arrPool.get(m_arrPool.size() - 1);
+			m_arrPool.remove(m_arrPool.size() - 1);
+			return node;
 		}
 	}
 	
@@ -60,86 +100,162 @@ public class AI
 			return ___;
 		}
 		
-		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
+		for (DFSNode node : m_arrDFSNodeList) 
 		{
-			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
+			int i = node.x;
+			int j = node.y;
+			if(!m_stCtx.IsEmptyPos(i, j))
 			{
-				int i = SEARCH_ARRAY[_1];
-				int j = SEARCH_ARRAY[_2];
-				if(!m_stCtx.IsEmptyPos(i, j))
+				continue;
+			}
+			
+			if(localAlpha >= localBeta)
+			{
+				// cut
+				continue;
+			}
+			
+			boolean _isEmptyAround = true;
+			for(int _tx=-1;_tx<=1;_tx++) 
+			{
+				for(int _ty=-1;_ty<=1;_ty++) 
 				{
-					continue;
-				}
-				
-				if(localAlpha >= localBeta)
-				{
-					// cut
-					continue;
-				}
-				
-				boolean _isEmptyAround = true;
-				for(int _tx=-1;_tx<=1;_tx++) 
-				{
-					for(int _ty=-1;_ty<=1;_ty++) 
+					if(_tx == 0 && _ty == 0) 
 					{
-						if(_tx == 0 && _ty == 0) 
-						{
-							continue;
-						}
-						
-						if(m_stCtx.IsValidPos(i+_tx, j+_ty) && m_stCtx.IsEmptyPos(i+_tx, j+_ty) == false)
-						{
-							_isEmptyAround = false;
-							break;
-						}
+						continue;
 					}
-				}
-				if(_isEmptyAround) 
-				{
-					continue;
-				}
-				
-				// 尝试在这个位置下棋
-				if(!m_stCtx.TestSetAt(i, j, isMaxNode))
-				{
-					System.out.println("TestSetAt逻辑错误！！");
-				}
-				
-//				System.out.println("Set at " + i + ".." + j);
-				float score = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
-				if(isMaxNode) 
-				{
-					if(score > localAlpha) 
+					
+					if(m_stCtx.IsValidPos(i+_tx, j+_ty) && m_stCtx.IsEmptyPos(i+_tx, j+_ty) == false)
 					{
-						localAlpha = score;
-						
-						// 第0层，记录下棋位置
-						if(dep == 0)
-						{
-							setX = i;
-							setY = j;
-						}
+						_isEmptyAround = false;
+						break;
 					}
-				}
-				else 
-				{
-					if(score < localBeta) 
-					{
-						localBeta = score;
-					}
-				}
-				
-				// 取消这个位置的棋子
-				if(!m_stCtx.UnsetAt(i, j))
-				{
-					System.out.println("UnsetAt逻辑错误！！");
 				}
 			}
+			if(_isEmptyAround) 
+			{
+				continue;
+			}
+			
+			// 尝试在这个位置下棋
+			if(!m_stCtx.TestSetAt(i, j, isMaxNode))
+			{
+				System.out.println("TestSetAt逻辑错误！！");
+			}
+			
+//			System.out.println("Set at " + i + ".." + j);
+			float score = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
+			if(isMaxNode) 
+			{
+				if(score > localAlpha) 
+				{
+					localAlpha = score;
+					
+					// 第0层，记录下棋位置
+					if(dep == 0)
+					{
+						setX = i;
+						setY = j;
+					}
+				}
+			}
+			else 
+			{
+				if(score < localBeta) 
+				{
+					localBeta = score;
+				}
+			}
+			
+			// 取消这个位置的棋子
+			if(!m_stCtx.UnsetAt(i, j))
+			{
+				System.out.println("UnsetAt逻辑错误！！");
+			}
 		}
+		
+//		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
+//		{
+//			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
+//			{
+//				int i = SEARCH_ARRAY[_1];
+//				int j = SEARCH_ARRAY[_2];
+//				if(!m_stCtx.IsEmptyPos(i, j))
+//				{
+//					continue;
+//				}
+//				
+//				if(localAlpha >= localBeta)
+//				{
+//					// cut
+//					continue;
+//				}
+//				
+//				boolean _isEmptyAround = true;
+//				for(int _tx=-1;_tx<=1;_tx++) 
+//				{
+//					for(int _ty=-1;_ty<=1;_ty++) 
+//					{
+//						if(_tx == 0 && _ty == 0) 
+//						{
+//							continue;
+//						}
+//						
+//						if(m_stCtx.IsValidPos(i+_tx, j+_ty) && m_stCtx.IsEmptyPos(i+_tx, j+_ty) == false)
+//						{
+//							_isEmptyAround = false;
+//							break;
+//						}
+//					}
+//				}
+//				if(_isEmptyAround) 
+//				{
+//					continue;
+//				}
+//				
+//				// 尝试在这个位置下棋
+//				if(!m_stCtx.TestSetAt(i, j, isMaxNode))
+//				{
+//					System.out.println("TestSetAt逻辑错误！！");
+//				}
+//				
+////				System.out.println("Set at " + i + ".." + j);
+//				float score = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
+//				if(isMaxNode) 
+//				{
+//					if(score > localAlpha) 
+//					{
+//						localAlpha = score;
+//						
+//						// 第0层，记录下棋位置
+//						if(dep == 0)
+//						{
+//							setX = i;
+//							setY = j;
+//						}
+//					}
+//				}
+//				else 
+//				{
+//					if(score < localBeta) 
+//					{
+//						localBeta = score;
+//					}
+//				}
+//				
+//				// 取消这个位置的棋子
+//				if(!m_stCtx.UnsetAt(i, j))
+//				{
+//					System.out.println("UnsetAt逻辑错误！！");
+//				}
+//			}
+//		}
 		
 		return isMaxNode ? localAlpha : localBeta;
 	}
 	
+	private DFSNodePool m_arrNodePool = new DFSNodePool();
+	private List<DFSNode> m_arrDFSNodeList = new ArrayList<>();
 	private int setX = -1;
 	private int setY = -1;
 	private float alpha = 0;
@@ -149,6 +265,38 @@ public class AI
 		alpha = ScoreEvaluator.MIN;
 		beta = ScoreEvaluator.MAX;
 		setX = setY = -1;
+		
+		m_arrDFSNodeList.clear();
+		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
+		{
+			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
+			{
+				int i = SEARCH_ARRAY[_1];
+				int j = SEARCH_ARRAY[_2];
+				if(m_stCtx.IsEmptyPos(i, j)) 
+				{
+					m_arrDFSNodeList.add(m_arrNodePool.CheckOut().SetX(i).SetY(j).SetScore(ScoreEvaluator.Instance().GetScoreAtPos(i, j, true)));
+				}
+			}
+		}
+		m_arrDFSNodeList.sort(new Comparator<DFSNode>() {
+			@Override
+			public int compare(DFSNode o1, DFSNode o2) {
+				float dt = o1.score - o2.score;
+				if(dt < -0.001f) return 1;
+				if(dt > 0.001f) return -1;
+				return 0;
+			}
+		});
+	}
+	
+	private void AfterAISetChess()
+	{
+		for (DFSNode item : m_arrDFSNodeList) 
+		{
+			m_arrNodePool.CheckIn(item);
+		}
+		m_arrDFSNodeList.clear();
 	}
 	
 	/**

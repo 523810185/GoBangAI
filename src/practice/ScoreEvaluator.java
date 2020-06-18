@@ -243,4 +243,101 @@ public class ScoreEvaluator
 			}
 		}
 	}
+	
+	public float GetScoreAtPos(int x, int y, boolean isAIPlay) 
+	{
+		Board ctx = Board.Instance();
+		if(ctx.IsValidPos(x, y) == false || ctx.IsEmptyPos(x, y) == false) 
+		{
+			// 只评估一个为空的位置(x, y)
+			System.out.println("GetScoreAtPos 逻辑错误！");
+			return 0;
+		}
+		
+		float score = 0f;
+		
+		for(int __=0;__<Board.DIR.length;__++) 
+		{
+			int[] dir = Board.DIR[__];
+			int _dirX = dir[0];
+			int _dirY = dir[1];
+			
+			// 判定左边
+			int cntL = 0;
+			int _LoneX = x - _dirX;
+			int _LoneY = y - _dirY;
+			if(ctx.IsValidPos(_LoneX, _LoneY) && ctx.IsEmptyPos(_LoneX, _LoneY) == false) 
+			{
+				cntL++;
+				for(int i=2;i<=4;i++) 
+				{
+					int _tx = x - i * _dirX;
+					int _ty = y - i * _dirY;
+					if(ctx.IsSameColor(_LoneX, _LoneY, _tx, _ty) == false) 
+					{
+						break;
+					}
+					
+					cntL++;
+				}
+			}
+			// 判定右边
+			int cntR = 0;
+			int _RoneX = x + _dirX;
+			int _RoneY = y + _dirY;
+			if(ctx.IsValidPos(_RoneX, _RoneY) && ctx.IsEmptyPos(_RoneX, _RoneY) == false) 
+			{
+				cntR++;
+				for(int i=2;i<=4;i++) 
+				{
+					int _tx = x + i * _dirX;
+					int _ty = y + i * _dirY;
+					if(ctx.IsSameColor(_RoneX, _RoneY, _tx, _ty) == false) 
+					{
+						break;
+					}
+					
+					cntR++;
+				}
+			}
+			
+			if(ctx.IsSameColor(_LoneX, _LoneY, _RoneX, _RoneY)) 
+			{
+				int cntAll = cntL + cntR;
+				score += GetPosScoreWithoutColor(cntAll);
+			}
+			else 
+			{
+				int cntAll = Math.max(cntL, cntR);
+				score += GetPosScoreWithoutColor(cntAll);
+			}
+		}
+		
+		return score;
+	}
+	
+	/**
+	 * call only by GetScoreAtPos()
+	 * @param cntAll
+	 * @return
+	 */
+	private float GetPosScoreWithoutColor(int cntAll) 
+	{
+		if(cntAll >= 4) 
+		{
+			return LIVE_FOUR_SCORE;
+		}
+		else if(cntAll == 3) 
+		{
+			return LIVE_THREE_SCORE;
+		}
+		else if(cntAll == 2) 
+		{
+			return LIVE_TWO_SCORE;
+		}
+		else
+		{
+			return cntAll;
+		}
+	}
 }
