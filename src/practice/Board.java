@@ -80,17 +80,27 @@ public class Board
 		return GetThisColorChar(m_eAIColor) == m_stBoard[x][y];
 	}
 	
-	public boolean TestSetAt(int x, int y, boolean isAI)
+	public class TestSetResult 
 	{
+		public boolean setSuccess, gameIsEnd;
+	}
+	
+	public TestSetResult TestSetAt(int x, int y, boolean isAI)
+	{
+		TestSetResult result = new TestSetResult();
+		result.setSuccess = result.gameIsEnd = false;
 		if(!IsEmptyPos(x, y))
 		{
-			return false;
+			return result;
 		}
 		
 		PlayerColor color = isAI ? m_eAIColor : this.GetOppositeColor(m_eAIColor);
 		char c = this.GetThisColorChar(color);
 		m_stBoard[x][y] = c;
-		return true;
+		
+		result.setSuccess = true;
+		result.gameIsEnd = this.IsEndInner(color, true);
+		return result;
 	}
 	
 	public boolean UnsetAt(int x, int y) 
@@ -109,6 +119,15 @@ public class Board
 		return m_stBoard;
 	}
 	
+	private void TestAI()
+	{
+		m_stBoard[7][7] = '1';
+		m_stBoard[7][8] = '1';
+		m_stBoard[8][7] = '2';
+		m_stBoard[8][8] = '2';
+		m_stBoard[8][9] = '2';
+	}
+	
 	public void ResetGame() 
 	{
 		for(int i=0;i<BOARD_SIZE;i++) {
@@ -116,6 +135,8 @@ public class Board
 				m_stBoard[i][j]='0';
 			}
 		}
+		
+		TestAI();
 		
 		m_eNowColor = Board.PlayerColor.Black;
 		
@@ -161,7 +182,7 @@ public class Board
 		
 		m_iExistChessCnt++;
 		m_stBoard[x][y] = GetNowColorChar();
-		if(!IsEndInner(m_eNowColor))
+		if(!IsEndInner(m_eNowColor, false))
 		{
 			SwapNowColor();
 			AI.Instance().DoMove();
@@ -184,7 +205,7 @@ public class Board
 		
 		m_iExistChessCnt++;
 		m_stBoard[x][y] = GetThisColorChar(m_eAIColor);
-		if(!IsEndInner(m_eAIColor))
+		if(!IsEndInner(m_eAIColor, false))
 		{
 			SwapNowColor();
 		}
@@ -224,7 +245,7 @@ public class Board
 	/**
 	 * 判断 当最后一步棋放入完成后是否是五部成棋
 	 */
-	private boolean IsEndInner(Board.PlayerColor color) 
+	private boolean IsEndInner(Board.PlayerColor color, boolean isInDFS) 
 	{
 		char c = GetThisColorChar(color);
 		
@@ -258,16 +279,19 @@ public class Board
 					}
 					if(cnt == 5) 
 					{
-						System.out.println("endGame ! ");
-						for(int __=0;__<=4;__++) 
-						{
-							int _xxx = i + __ * _x;
-							int _yyy = j + __ * _y;
-							System.out.println("?? " + _xxx + " " + _yyy + " " + m_stBoard[_xxx][_yyy]);
-						}
+//						System.out.println("endGame ! ");
+//						for(int __=0;__<=4;__++) 
+//						{
+//							int _xxx = i + __ * _x;
+//							int _yyy = j + __ * _y;
+//							System.out.println("?? " + _xxx + " " + _yyy + " " + m_stBoard[_xxx][_yyy]);
+//						}
 						
-						m_bGameIsEnd = true;
-						m_eWinnerColor = color;
+						if(!isInDFS)
+						{
+							m_bGameIsEnd = true;
+							m_eWinnerColor = color;
+						}
 						return true;
 					}
 				}
