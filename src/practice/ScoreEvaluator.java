@@ -40,7 +40,6 @@ public class ScoreEvaluator
 	private static final float LIVE_TWO_SCORE = 20;
 	private static final float SLEEP_TWO_SCORE = 10; 
 	private static final float PLAYER_SCORE_RATE = -0.5f;
-	public static boolean debug = false;
 	public float GetBoardScore(boolean isAIPlay)
 	{
 		ResetVisRecorder();
@@ -203,10 +202,6 @@ public class ScoreEvaluator
 			}
 		}
 		
-		if(debug) 
-		{
-			System.out.println(" score : " + score);
-		}
 		return score;
 	}
 	

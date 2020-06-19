@@ -136,7 +136,7 @@ public class Board
 			}
 		}
 		
-		TestAI();
+//		TestAI();
 		
 		m_eNowColor = Board.PlayerColor.Black;
 		

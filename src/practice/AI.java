@@ -95,12 +95,12 @@ public class AI
 	private static final int MAX_DFS_LEN = 4; 
 	private float DFS(int dep, boolean isMaxNode, float localAlpha, float localBeta)
 	{
-		try {
-			Thread.sleep(0);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		try {
+//			Thread.sleep(0);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		if(dep > MAX_DFS_LEN) 
 		{
 			float ___ = ScoreEvaluator.Instance().GetBoardScore(!isMaxNode);
@@ -121,11 +121,6 @@ public class AI
 			{
 				// cut
 				continue;
-			}
-			
-			if(dep == 0 && i == 8 && j == 6) 
-			{
-				ScoreEvaluator.debug = true;
 			}
 			
 			boolean _isEmptyAround = true;
@@ -169,15 +164,9 @@ public class AI
 				// TODO.. 这里逻辑可能有问题
 				score = ScoreEvaluator.Instance().GetBoardScore(!isMaxNode);
 			}
+			
 			if(isMaxNode) 
 			{
-				if(dep == 0) 
-				{
-					if(i == 8 && j == 6) 
-					{
-						System.out.println("?????? " + score);
-					}
-				}
 				if(score > localAlpha) 
 				{
 					localAlpha = score;
@@ -202,11 +191,6 @@ public class AI
 			if(!m_stCtx.UnsetAt(i, j))
 			{
 				System.out.println("UnsetAt逻辑错误！！");
-			}
-			
-			if(dep == 0 && i == 8 && j == 6) 
-			{
-				ScoreEvaluator.debug = false;
 			}
 		}
 		
