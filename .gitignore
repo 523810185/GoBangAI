@@ -1,3 +1,8 @@
 bin/practice/AI$DFSNodePool.class
 bin/practice/AI$DFSNode.class
 bin/practice/AI$1.class
+bin/practice/ScoreEvaluator.class
+bin/practice/Board.class
+bin/practice/Board$TestSetResult.class
+bin/practice/AI.class
+bin/practice/AI$AIThread.class
