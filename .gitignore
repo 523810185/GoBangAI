@@ -7,3 +7,4 @@ bin/practice/Board$TestSetResult.class
 bin/practice/AI.class
 bin/practice/AI$AIThread.class
 bin/.gitignore
+bin/practice/
