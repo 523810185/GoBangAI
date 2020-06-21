@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import practice.Board.PlayerColor;
 import practice.Board.TestSetResult;
+import practice.Zobrist.ScoreNode;
 
 public class AI 
 {
@@ -43,7 +45,17 @@ public class AI
 				return;
 			}
 			
-			DFS(0, true, alpha, beta);
+			// 迭代加深搜索
+			for(int dfsLen = 2; dfsLen <= MAX_DFS_LEN; dfsLen += 2)
+			{
+				long nowTime = System.currentTimeMillis();
+				if(IsOutOfTime()) 
+				{
+					break;
+				}
+				DFS(MAX_DFS_LEN - dfsLen, true, alpha, beta);
+			}
+			
 			AfterAISetChess();
 			if(!m_stCtx.IsEmptyPos(setX, setY))
 			{
@@ -64,10 +76,10 @@ public class AI
 	private class DFSNode
 	{
 		public int x, y;
-		public float score;
+		public int score;
 		public DFSNode SetX(int x) { this.x = x; return this; }
 		public DFSNode SetY(int y) { this.y = y; return this; }
-		public DFSNode SetScore(float score) { this.score = score; return this; }
+		public DFSNode SetScore(int score) { this.score = score; return this; }
 	}
 	
 	private class DFSNodePool 
@@ -91,10 +103,23 @@ public class AI
 		}
 	}
 	
+	private class DFSResultNode
+	{
+		public int score;
+		public boolean canUse = false; // 是否可用
+		public DFSResultNode SetScore(int score) { this.score = score; return this; }
+		public DFSResultNode SetCanUse(boolean canUse) { this.canUse = canUse; return this; }
+	}
+	
+	private static final int MAX_DFS_TIME_MILLIS = 100000; // 最大搜索时间
 	private static final int[] SEARCH_ARRAY = {7,8,6,9,5,10,4,11,3,12,2,13,1,14};
 	private static final int MAX_DFS_LEN = 6; 
-	private float DFS(int dep, boolean isMaxNode, float localAlpha, float localBeta)
+	private DFSResultNode DFS(int dep, boolean isMaxNode, int localAlpha, int localBeta)
 	{
+		if(IsOutOfTime()) 
+		{
+			return new DFSResultNode().SetScore(0).SetCanUse(false);
+		}
 //		try {
 //			Thread.sleep(0);
 //		} catch (InterruptedException e) {
@@ -103,9 +128,9 @@ public class AI
 //		}
 		if(dep > MAX_DFS_LEN) 
 		{
-			float ___ = ScoreEvaluator.Instance().GetBoardScore(!isMaxNode);
+			int ___ = ScoreEvaluator.Instance().GetBoardScore(!isMaxNode);
 //			System.out.println("score -- " + ___);
-			return ___;
+			return new DFSResultNode().SetScore(___).SetCanUse(true);
 		}
 		
 		// 启发式搜索，按照单点位置的分数对节点进行排序，并从高到低访问
@@ -132,6 +157,8 @@ public class AI
 			}
 		});
 		
+		
+		boolean haveAtLeastOneNodeCanUse = false;
 		for (DFSNode node : nodeList) 
 		{
 			int i = node.x;
@@ -144,7 +171,8 @@ public class AI
 			if(localAlpha >= localBeta)
 			{
 				// cut
-				continue;
+//				continue;
+				break;
 			}
 			
 			boolean _isEmptyAround = true;
@@ -177,37 +205,59 @@ public class AI
 			}
 //			System.out.println("Set at " + i + ".." + j);
 			
-			float score = 0f;
+//			int score = 0;
+			DFSResultNode dfsRes = null;
 			// 只有游戏还没结束，才继续搜索
 			if(result.gameIsEnd == false) 
 			{
-				score = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
+				// 得到当前局面的缓存分数
+//				long boardHashCode = m_stCtx.GetBoardHashCode();
+//				PlayerColor nowColor = isMaxNode ? m_stCtx.GetAIColor() : m_stCtx.GetGamerColor();
+//				ScoreNode scoreNode = Zobrist.Instance().GetScoreNodeByHashCode(boardHashCode, nowColor);
+//				int _boardDep = m_stCtx.GetExistChessCnt() + (MAX_DFS_LEN - dep);
+//				if(scoreNode != null && _boardDep <= scoreNode.dep) 
+//				{
+//					score = scoreNode.score;
+//				}
+//				else 
+//				{
+//					score = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
+//					Zobrist.Instance().SetScoreNodeByHashCode(boardHashCode, nowColor, score, _boardDep);
+//				}
+				
+				dfsRes = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
 			}
 			else 
 			{
 				// TODO.. 这里逻辑可能有问题
-				score = ScoreEvaluator.Instance().GetBoardScore(!isMaxNode);
+				dfsRes = new DFSResultNode().SetScore(ScoreEvaluator.Instance().GetBoardScore(!isMaxNode)).SetCanUse(true);
 			}
 			
-			if(isMaxNode) 
+			if(dfsRes.canUse) 
 			{
-				if(score > localAlpha) 
+				haveAtLeastOneNodeCanUse = true;
+				
+				int score = dfsRes.score;
+				if(isMaxNode) 
 				{
-					localAlpha = score;
-					
-					// 第0层，记录下棋位置
-					if(dep == 0)
+					if(score > localAlpha) 
 					{
-						setX = i;
-						setY = j;
+						localAlpha = score;
+						
+						// 第0层，记录下棋位置
+						if(dep == 0)
+						{
+							setX = i;
+							setY = j;
+						}
 					}
 				}
-			}
-			else 
-			{
-				if(score < localBeta) 
+				else 
 				{
-					localBeta = score;
+					if(score < localBeta) 
+					{
+						localBeta = score;
+					}
 				}
 			}
 			
@@ -301,20 +351,25 @@ public class AI
 //			}
 //		}
 		
-		return isMaxNode ? localAlpha : localBeta;
+		return new DFSResultNode().SetScore(isMaxNode ? localAlpha : localBeta).SetCanUse(haveAtLeastOneNodeCanUse);
 	}
 	
 	private DFSNodePool m_arrNodePool = new DFSNodePool();
 	private List<DFSNode> m_arrDFSNodeList = new ArrayList<>();
 	private int setX = -1;
 	private int setY = -1;
-	private float alpha = 0;
-	private float beta = 0;
+	private int alpha = 0;
+	private int beta = 0;
 	private void Init()
 	{
 		alpha = ScoreEvaluator.MIN;
 		beta = ScoreEvaluator.MAX;
 		setX = setY = -1;
+		
+		// 记录初始时间
+		this.m_lStartTimeMillis = System.currentTimeMillis();
+		
+		Zobrist.Instance().Clear();
 		
 //		m_arrDFSNodeList.clear();
 //		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
@@ -342,6 +397,7 @@ public class AI
 	
 	private void AfterAISetChess()
 	{
+		System.out.println("使用的时间为：" + (System.currentTimeMillis() - m_lStartTimeMillis) / 1000f);
 //		for (DFSNode item : m_arrDFSNodeList) 
 //		{
 //			m_arrNodePool.CheckIn(item);
@@ -349,6 +405,16 @@ public class AI
 //		m_arrDFSNodeList.clear();
 	}
 	
+	/**
+	 * 返回是否已经超时
+	 * @return
+	 */
+	private boolean IsOutOfTime() 
+	{
+		return System.currentTimeMillis() - m_lStartTimeMillis >= MAX_DFS_TIME_MILLIS;
+	}
+	
+	private long m_lStartTimeMillis = 0;
 	/**
 	 * AI下棋
 	 */

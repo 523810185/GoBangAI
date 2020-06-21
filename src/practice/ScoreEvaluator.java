@@ -30,23 +30,22 @@ public class ScoreEvaluator
 		this.m_stNowColor = nowColor;
 		return this;
 	}
-	public static final float MAX = 100000000;
-	public static final float MIN = -MAX;
-	private static final float GO_FIVE_SCORE = 10000000; 
-	private static final float LIVE_FOUR_SCORE = 100000;
-	private static final float CHONG_FOUR_SCORE = 10000;
-	private static final float LIVE_THREE_SCORE = 10000;
-	private static final float SLEEP_THREE_SCORE = 500;
-	private static final float LIVE_TWO_SCORE = 20;
-	private static final float SLEEP_TWO_SCORE = 10; 
-	private static final float PLAYER_SCORE_RATE = -0.5f;
-	public float GetBoardScore(boolean isAIPlay)
+	public static final int MAX = 100000000;
+	public static final int MIN = -MAX;
+	private static final int GO_FIVE_SCORE = 10000000; 
+	private static final int LIVE_FOUR_SCORE = 100000;
+	private static final int CHONG_FOUR_SCORE = 10000;
+	private static final int LIVE_THREE_SCORE = 10000;
+	private static final int SLEEP_THREE_SCORE = 500;
+	private static final int LIVE_TWO_SCORE = 20;
+	private static final int SLEEP_TWO_SCORE = 10; 
+	public int GetBoardScore(boolean isAIPlay)
 	{
 		ResetVisRecorder();
 		SetNowPlayer(Board.Instance().GetAIColor());
 		Board ctx = Board.Instance();
 		
-		float score = 0;
+		int score = 0;
 		
 		for(int k=0;k<Board.DIR.length;k++) 
 		{
@@ -244,7 +243,7 @@ public class ScoreEvaluator
 		}
 	}
 	
-	public float GetScoreAtPos(int x, int y, boolean isAIPlay) 
+	public int GetScoreAtPos(int x, int y, boolean isAIPlay) 
 	{
 		Board ctx = Board.Instance();
 		if(ctx.IsValidPos(x, y) == false || ctx.IsEmptyPos(x, y) == false) 
@@ -254,7 +253,7 @@ public class ScoreEvaluator
 			return 0;
 		}
 		
-		float score = 0f;
+		int score = 0;
 		
 		for(int __=0;__<Board.DIR.length;__++) 
 		{
@@ -304,12 +303,12 @@ public class ScoreEvaluator
 			if(ctx.IsSameColor(_LoneX, _LoneY, _RoneX, _RoneY)) 
 			{
 				int cntAll = cntL + cntR;
-				score += GetPosScoreWithoutColor(cntAll);
+				score += GetPosScoreWithoutColor(cntAll + 1);
 			}
 			else 
 			{
 				int cntAll = Math.max(cntL, cntR);
-				score += GetPosScoreWithoutColor(cntAll);
+				score += GetPosScoreWithoutColor(cntAll + 1);
 			}
 		}
 		
@@ -321,7 +320,7 @@ public class ScoreEvaluator
 	 * @param cntAll
 	 * @return
 	 */
-	private float GetPosScoreWithoutColor(int cntAll) 
+	private int GetPosScoreWithoutColor(int cntAll) 
 	{
 		if(cntAll >= 4) 
 		{

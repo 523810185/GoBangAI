@@ -20,6 +20,8 @@ public class Board
 		return m_pInstance;
 	}
 	
+	// 存储了当前棋盘的Hash
+	private long m_lBoardHash;
 	// 把图片拆分成坐标 用来存储下棋的位置
 	private char[][] m_stBoard = new char[15][15];
 	public final static int BOARD_SIZE = 15;
@@ -37,6 +39,11 @@ public class Board
 	public PlayerColor GetAIColor()
 	{
 		return m_eAIColor;
+	}
+	
+	public PlayerColor GetGamerColor() 
+	{
+		return GetOppositeColor(m_eAIColor);
 	}
 	
 	public boolean IsAIPlay()
@@ -77,7 +84,7 @@ public class Board
 			return false;
 		}
 		
-		return GetThisColorChar(m_eAIColor) == m_stBoard[x][y];
+		return ColorToChar(m_eAIColor) == m_stBoard[x][y];
 	}
 	
 	public class TestSetResult 
@@ -85,6 +92,12 @@ public class Board
 		public boolean setSuccess, gameIsEnd;
 	}
 	
+	/**
+	 * 搜索中供调用的方法
+	 * @param x
+	 * @param y
+	 * @param isAI
+	 */
 	public TestSetResult TestSetAt(int x, int y, boolean isAI)
 	{
 		TestSetResult result = new TestSetResult();
@@ -95,14 +108,18 @@ public class Board
 		}
 		
 		PlayerColor color = isAI ? m_eAIColor : this.GetOppositeColor(m_eAIColor);
-		char c = this.GetThisColorChar(color);
-		m_stBoard[x][y] = c;
+		PutChessInner(x, y, color);
 		
 		result.setSuccess = true;
 		result.gameIsEnd = this.IsEndInner(color, true);
 		return result;
 	}
 	
+	/**
+	 * 搜索中供取消调用的方法
+	 * @param x
+	 * @param y
+	 */
 	public boolean UnsetAt(int x, int y) 
 	{
 		if(!IsValidPos(x, y) || IsValidPos(x, y) && IsEmptyPos(x, y))
@@ -110,8 +127,13 @@ public class Board
 			return false;
 		}
 		
-		m_stBoard[x][y] = '0';
+		UnputChessInner(x, y);
 		return true;
+	}
+	
+	public long GetBoardHashCode() 
+	{
+		return m_lBoardHash;
 	}
 
 	public char[][] GetBoard() 
@@ -148,24 +170,7 @@ public class Board
 		m_bGameIsEnd = false;
 		m_eWinnerColor = null;
 		m_iExistChessCnt = 0;
-	}
-	
-	public void PutByColor(int x, int y, PlayerColor color) 
-	{
-		if(!IsEmptyPos(x, y))
-		{
-			return;
-		}
-		
-		m_stBoard[x][y] = GetThisColorChar(color);
-	}
-	
-	public void Unput(int x, int y) 
-	{
-		if(IsValidPos(x, y))
-		{
-			m_stBoard[x][y] = '0';
-		}
+		m_lBoardHash = 0;
 	}
 	
 	public boolean GamerPutAt(int x, int y) 
@@ -180,8 +185,7 @@ public class Board
 			return false;
 		}
 		
-		m_iExistChessCnt++;
-		m_stBoard[x][y] = GetNowColorChar();
+		PutChessInner(x, y, m_eNowColor);
 		if(!IsEndInner(m_eNowColor, false))
 		{
 			SwapNowColor();
@@ -189,7 +193,7 @@ public class Board
 		}
 		else 
 		{
-			System.out.println(" On End Game " + x + ",," + y + ".." + m_eNowColor + " ,, " + GetThisColorChar(m_eNowColor));
+			System.out.println(" On End Game " + x + ",," + y + ".." + m_eNowColor + " ,, " + ColorToChar(m_eNowColor));
 			
 			GoBang.Instance().end();
 		}
@@ -203,8 +207,7 @@ public class Board
 			return false;
 		}
 		
-		m_iExistChessCnt++;
-		m_stBoard[x][y] = GetThisColorChar(m_eAIColor);
+		PutChessInner(x, y, m_eAIColor);
 		if(!IsEndInner(m_eAIColor, false))
 		{
 			SwapNowColor();
@@ -214,6 +217,45 @@ public class Board
 			GoBang.Instance().end();
 		}
 		return true;
+	}
+	
+	/**
+	 * 内部使用的下棋方法
+	 * @param x
+	 * @param y
+	 * @param color
+	 */
+	private void PutChessInner(int x, int y, PlayerColor color) 
+	{
+		if(IsEmptyPos(x, y) == false) 
+		{
+			System.err.println("下棋出错，是个非法点或者不是空位置！" + x + " " + y);
+		}
+		else 
+		{
+			m_stBoard[x][y] = this.ColorToChar(color);
+			m_lBoardHash = Zobrist.Instance().AppendHashCode(m_lBoardHash, x, y, color);
+			m_iExistChessCnt++;
+		}
+	}
+	
+	/**
+	 * 内部使用的取消棋子方法
+	 * @param x
+	 * @param y
+	 */
+	private void UnputChessInner(int x, int y)
+	{
+		if(!IsValidPos(x, y) || IsEmptyPos(x, y))
+		{
+			System.err.println("取消下棋出错，是个非法点或者是空位置！" + x + " " + y);
+		}
+		else 
+		{
+			m_lBoardHash = Zobrist.Instance().UnAppendHashCode(m_lBoardHash, x, y, CharToColor(m_stBoard[x][y]));
+			m_stBoard[x][y] = '0';
+			m_iExistChessCnt--;
+		}
 	}
 	
 	private PlayerColor m_eWinnerColor = null;
@@ -247,7 +289,7 @@ public class Board
 	 */
 	private boolean IsEndInner(Board.PlayerColor color, boolean isInDFS) 
 	{
-		char c = GetThisColorChar(color);
+		char c = ColorToChar(color);
 		
 		for(int i=0;i<BOARD_SIZE;i++) 
 		{
@@ -312,7 +354,20 @@ public class Board
 			return PlayerColor.Black;
 		}
 	}
-	private char GetThisColorChar(PlayerColor color) 
+	private PlayerColor CharToColor(char c) 
+	{
+		if(c == '1') 
+		{
+			return PlayerColor.Black;
+		}
+		else if(c == '2') 
+		{
+			return PlayerColor.White;
+		}
+		
+		return null;
+	}
+	private char ColorToChar(PlayerColor color) 
 	{
 		char c = '0';
 		if(color == PlayerColor.Black)
@@ -328,7 +383,7 @@ public class Board
 	}
 	private char GetNowColorChar() 
 	{
-		return GetThisColorChar(m_eNowColor);
+		return ColorToChar(m_eNowColor);
 	}
 	private void SwapNowColor() 
 	{
