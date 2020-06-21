@@ -92,7 +92,7 @@ public class AI
 	}
 	
 	private static final int[] SEARCH_ARRAY = {7,8,6,9,5,10,4,11,3,12,2,13,1,14};
-	private static final int MAX_DFS_LEN = 4; 
+	private static final int MAX_DFS_LEN = 6; 
 	private float DFS(int dep, boolean isMaxNode, float localAlpha, float localBeta)
 	{
 //		try {
@@ -108,7 +108,31 @@ public class AI
 			return ___;
 		}
 		
-		for (DFSNode node : m_arrDFSNodeList) 
+		// 启发式搜索，按照单点位置的分数对节点进行排序，并从高到低访问
+		List<DFSNode> nodeList = new ArrayList<>();
+		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
+		{
+			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
+			{
+				int i = SEARCH_ARRAY[_1];
+				int j = SEARCH_ARRAY[_2];
+				if(m_stCtx.IsEmptyPos(i, j)) 
+				{
+					nodeList.add(m_arrNodePool.CheckOut().SetX(i).SetY(j).SetScore(ScoreEvaluator.Instance().GetScoreAtPos(i, j, true)));
+				}
+			}
+		}
+		nodeList.sort(new Comparator<DFSNode>() {
+			@Override
+			public int compare(DFSNode o1, DFSNode o2) {
+				float dt = o1.score - o2.score;
+				if(dt < -0.001f) return 1;
+				if(dt > 0.001f) return -1;
+				return 0;
+			}
+		});
+		
+		for (DFSNode node : nodeList) 
 		{
 			int i = node.x;
 			int j = node.y;
@@ -192,6 +216,12 @@ public class AI
 			{
 				System.out.println("UnsetAt逻辑错误！！");
 			}
+		}
+		
+		// 归还节点
+		for (DFSNode dfsNode : nodeList) 
+		{
+			m_arrNodePool.CheckIn(dfsNode);
 		}
 		
 //		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
@@ -286,37 +316,37 @@ public class AI
 		beta = ScoreEvaluator.MAX;
 		setX = setY = -1;
 		
-		m_arrDFSNodeList.clear();
-		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
-		{
-			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
-			{
-				int i = SEARCH_ARRAY[_1];
-				int j = SEARCH_ARRAY[_2];
-				if(m_stCtx.IsEmptyPos(i, j)) 
-				{
-					m_arrDFSNodeList.add(m_arrNodePool.CheckOut().SetX(i).SetY(j).SetScore(ScoreEvaluator.Instance().GetScoreAtPos(i, j, true)));
-				}
-			}
-		}
-		m_arrDFSNodeList.sort(new Comparator<DFSNode>() {
-			@Override
-			public int compare(DFSNode o1, DFSNode o2) {
-				float dt = o1.score - o2.score;
-				if(dt < -0.001f) return 1;
-				if(dt > 0.001f) return -1;
-				return 0;
-			}
-		});
+//		m_arrDFSNodeList.clear();
+//		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
+//		{
+//			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
+//			{
+//				int i = SEARCH_ARRAY[_1];
+//				int j = SEARCH_ARRAY[_2];
+//				if(m_stCtx.IsEmptyPos(i, j)) 
+//				{
+//					m_arrDFSNodeList.add(m_arrNodePool.CheckOut().SetX(i).SetY(j).SetScore(ScoreEvaluator.Instance().GetScoreAtPos(i, j, true)));
+//				}
+//			}
+//		}
+//		m_arrDFSNodeList.sort(new Comparator<DFSNode>() {
+//			@Override
+//			public int compare(DFSNode o1, DFSNode o2) {
+//				float dt = o1.score - o2.score;
+//				if(dt < -0.001f) return 1;
+//				if(dt > 0.001f) return -1;
+//				return 0;
+//			}
+//		});
 	}
 	
 	private void AfterAISetChess()
 	{
-		for (DFSNode item : m_arrDFSNodeList) 
-		{
-			m_arrNodePool.CheckIn(item);
-		}
-		m_arrDFSNodeList.clear();
+//		for (DFSNode item : m_arrDFSNodeList) 
+//		{
+//			m_arrNodePool.CheckIn(item);
+//		}
+//		m_arrDFSNodeList.clear();
 	}
 	
 	/**
