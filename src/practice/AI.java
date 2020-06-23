@@ -48,7 +48,6 @@ public class AI
 			// 迭代加深搜索
 			for(int dfsLen = 2; dfsLen <= MAX_DFS_LEN; dfsLen += 2)
 			{
-				long nowTime = System.currentTimeMillis();
 				if(IsOutOfTime()) 
 				{
 					break;
@@ -198,8 +197,8 @@ public class AI
 			}
 			
 			// 尝试在这个位置下棋
-			TestSetResult result = m_stCtx.TestSetAt(i, j, isMaxNode);
-			if(!result.setSuccess)
+			TestSetResult testSetResult = m_stCtx.TestSetAt(i, j, isMaxNode);
+			if(!testSetResult.setSuccess)
 			{
 				System.out.println("TestSetAt逻辑错误！！");
 			}
@@ -208,7 +207,7 @@ public class AI
 //			int score = 0;
 			DFSResultNode dfsRes = null;
 			// 只有游戏还没结束，才继续搜索
-			if(result.gameIsEnd == false) 
+			if(testSetResult.gameIsEnd == false) 
 			{
 				// 得到当前局面的缓存分数
 //				long boardHashCode = m_stCtx.GetBoardHashCode();
@@ -274,83 +273,6 @@ public class AI
 			m_arrNodePool.CheckIn(dfsNode);
 		}
 		
-//		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
-//		{
-//			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
-//			{
-//				int i = SEARCH_ARRAY[_1];
-//				int j = SEARCH_ARRAY[_2];
-//				if(!m_stCtx.IsEmptyPos(i, j))
-//				{
-//					continue;
-//				}
-//				
-//				if(localAlpha >= localBeta)
-//				{
-//					// cut
-//					continue;
-//				}
-//				
-//				boolean _isEmptyAround = true;
-//				for(int _tx=-1;_tx<=1;_tx++) 
-//				{
-//					for(int _ty=-1;_ty<=1;_ty++) 
-//					{
-//						if(_tx == 0 && _ty == 0) 
-//						{
-//							continue;
-//						}
-//						
-//						if(m_stCtx.IsValidPos(i+_tx, j+_ty) && m_stCtx.IsEmptyPos(i+_tx, j+_ty) == false)
-//						{
-//							_isEmptyAround = false;
-//							break;
-//						}
-//					}
-//				}
-//				if(_isEmptyAround) 
-//				{
-//					continue;
-//				}
-//				
-//				// 尝试在这个位置下棋
-//				if(!m_stCtx.TestSetAt(i, j, isMaxNode))
-//				{
-//					System.out.println("TestSetAt逻辑错误！！");
-//				}
-//				
-////				System.out.println("Set at " + i + ".." + j);
-//				float score = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
-//				if(isMaxNode) 
-//				{
-//					if(score > localAlpha) 
-//					{
-//						localAlpha = score;
-//						
-//						// 第0层，记录下棋位置
-//						if(dep == 0)
-//						{
-//							setX = i;
-//							setY = j;
-//						}
-//					}
-//				}
-//				else 
-//				{
-//					if(score < localBeta) 
-//					{
-//						localBeta = score;
-//					}
-//				}
-//				
-//				// 取消这个位置的棋子
-//				if(!m_stCtx.UnsetAt(i, j))
-//				{
-//					System.out.println("UnsetAt逻辑错误！！");
-//				}
-//			}
-//		}
-		
 		return new DFSResultNode().SetScore(isMaxNode ? localAlpha : localBeta).SetCanUse(haveAtLeastOneNodeCanUse);
 	}
 	
@@ -370,39 +292,11 @@ public class AI
 		this.m_lStartTimeMillis = System.currentTimeMillis();
 		
 		Zobrist.Instance().Clear();
-		
-//		m_arrDFSNodeList.clear();
-//		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
-//		{
-//			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
-//			{
-//				int i = SEARCH_ARRAY[_1];
-//				int j = SEARCH_ARRAY[_2];
-//				if(m_stCtx.IsEmptyPos(i, j)) 
-//				{
-//					m_arrDFSNodeList.add(m_arrNodePool.CheckOut().SetX(i).SetY(j).SetScore(ScoreEvaluator.Instance().GetScoreAtPos(i, j, true)));
-//				}
-//			}
-//		}
-//		m_arrDFSNodeList.sort(new Comparator<DFSNode>() {
-//			@Override
-//			public int compare(DFSNode o1, DFSNode o2) {
-//				float dt = o1.score - o2.score;
-//				if(dt < -0.001f) return 1;
-//				if(dt > 0.001f) return -1;
-//				return 0;
-//			}
-//		});
 	}
 	
 	private void AfterAISetChess()
 	{
 		System.out.println("使用的时间为：" + (System.currentTimeMillis() - m_lStartTimeMillis) / 1000f);
-//		for (DFSNode item : m_arrDFSNodeList) 
-//		{
-//			m_arrNodePool.CheckIn(item);
-//		}
-//		m_arrDFSNodeList.clear();
 	}
 	
 	/**
