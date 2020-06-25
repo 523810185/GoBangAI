@@ -46,19 +46,27 @@ public class AI
 			}
 			
 			// 迭代加深搜索
-			for(int dfsLen = 2; dfsLen <= MAX_DFS_LEN; dfsLen += 2)
-			{
-				if(IsOutOfTime()) 
-				{
-					break;
-				}
-				DFS(MAX_DFS_LEN - dfsLen, true, alpha, beta);
-			}
+//			for(int dfsLen = 2; dfsLen <= MAX_DFS_LEN; dfsLen += 2)
+//			{
+//				if(IsOutOfTime()) 
+//				{
+//					break;
+//				}
+//				m_iDFSLowestDep = MAX_DFS_LEN - dfsLen;
+//				alpha = DFS(m_iDFSLowestDep, true, alpha, beta).score;
+//			}
+			
+//			m_iDFSLowestDep = 0;
+//			DFS(m_iDFSLowestDep, true, alpha, beta);
+			
+//			MTDF(alpha, beta, 0, 0);
+			
+			alpha_beta(alpha, beta, 0, true);
 			
 			AfterAISetChess();
 			if(!m_stCtx.IsEmptyPos(setX, setY))
 			{
-				System.out.println("AI DFS 逻辑错误！");
+				System.out.println("AI DFS 逻辑错误！" + setX + " " + setY);
 			}
 			else 
 			{
@@ -66,6 +74,8 @@ public class AI
 			}
 		}
 	}
+	
+	private int m_iDFSLowestDep = -1;
 	
 	/**
 	 * 启发式搜索的预处理节点
@@ -110,9 +120,9 @@ public class AI
 		public DFSResultNode SetCanUse(boolean canUse) { this.canUse = canUse; return this; }
 	}
 	
-	private static final int MAX_DFS_TIME_MILLIS = 100000; // 最大搜索时间
+	private static final int MAX_DFS_TIME_MILLIS = 10000; // 最大搜索时间
 	private static final int[] SEARCH_ARRAY = {7,8,6,9,5,10,4,11,3,12,2,13,1,14};
-	private static final int MAX_DFS_LEN = 6; 
+	private static final int MAX_DFS_LEN = 5; 
 	private DFSResultNode DFS(int dep, boolean isMaxNode, int localAlpha, int localBeta)
 	{
 		if(IsOutOfTime()) 
@@ -224,6 +234,17 @@ public class AI
 //					Zobrist.Instance().SetScoreNodeByHashCode(boardHashCode, nowColor, score, _boardDep);
 //				}
 				
+				// pvs 
+//				if(DFS(dep + 1, !isMaxNode, localAlpha, localAlpha + 1).score <= localAlpha)
+//				{
+//					// 取消这个位置的棋子
+//					if(!m_stCtx.UnsetAt(i, j))
+//					{
+//						System.out.println("UnsetAt逻辑错误！！");
+//					}
+//					break;
+//				}
+				
 				dfsRes = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
 			}
 			else 
@@ -244,7 +265,7 @@ public class AI
 						localAlpha = score;
 						
 						// 第0层，记录下棋位置
-						if(dep == 0)
+						if(dep == m_iDFSLowestDep)
 						{
 							setX = i;
 							setY = j;
@@ -276,8 +297,210 @@ public class AI
 		return new DFSResultNode().SetScore(isMaxNode ? localAlpha : localBeta).SetCanUse(haveAtLeastOneNodeCanUse);
 	}
 	
+	private int MTDF(int localAlpha, int localBeta, int dep, int test) 
+	{
+//		int best_value;
+//		do 
+//		{
+//			// 进行零宽窗口试探
+//			best_value = alpha_beta(test-1, test, dep, true);
+//			// 如果是alpha节点
+//			if (best_value < test) {
+//				// 更新估值上限，并将此做为新的试探值
+//				test = localBeta = best_value;
+//			// 否则是beta节点
+//			} else {
+//				// 更新估值下限
+//				localAlpha = best_value;
+//				// 新的试探值
+//				test = best_value + 1;
+//			}
+//		} while (localAlpha < localBeta);
+//		return best_value;
+		
+		int g = test;
+		int _beta;
+		while(localAlpha < localBeta)
+		{
+			if(g == localAlpha) 
+			{
+				_beta = g + 1;
+			}
+			else 
+			{
+				_beta = g;
+			}
+			
+			g = alpha_beta(_beta - 1, _beta, 0, true);
+			
+			if(g < _beta) 
+			{
+				localBeta = g;
+			}
+			else 
+			{
+				localAlpha = g;
+			}
+		}
+		return g;
+	}
+	
+	private int alpha_beta(int localAlpha, int localBeta, int dep, boolean isAI){
+		// 当前最佳分值，预设为负无穷大
+		int best_value = ScoreEvaluator.MIN;
+		// 启发式搜索
+		List<DFSNode> nodeList = new ArrayList<>();
+		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
+		{
+			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
+			{
+				int i = SEARCH_ARRAY[_1];
+				int j = SEARCH_ARRAY[_2];
+				if(m_stCtx.IsEmptyPos(i, j)) 
+				{
+					nodeList.add(m_arrNodePool.CheckOut().SetX(i).SetY(j).SetScore(ScoreEvaluator.Instance().GetScoreAtPos(i, j, true)));
+				}
+			}
+		}
+		nodeList.sort(new Comparator<DFSNode>() {
+			@Override
+			public int compare(DFSNode o1, DFSNode o2) {
+				float dt = o1.score - o2.score;
+				if(dt < -0.001f) return 1;
+				if(dt > 0.001f) return -1;
+				return 0;
+			}
+		});
+		
+		for (DFSNode node : nodeList) 
+		{
+			int i = node.x;
+			int j = node.y;
+			if(!m_stCtx.IsEmptyPos(i, j))
+			{
+				continue;
+			}
+			
+			boolean _isEmptyAround = true;
+			for(int _tx=-1;_tx<=1;_tx++) 
+			{
+				for(int _ty=-1;_ty<=1;_ty++) 
+				{
+					if(_tx == 0 && _ty == 0) 
+					{
+						continue;
+					}
+					
+					if(m_stCtx.IsValidPos(i+_tx, j+_ty) && m_stCtx.IsEmptyPos(i+_tx, j+_ty) == false)
+					{
+						_isEmptyAround = false;
+						break;
+					}
+				}
+			}
+			if(_isEmptyAround) 
+			{
+				continue;
+			}
+			
+			// 尝试在这个位置下棋
+			TestSetResult testSetResult = m_stCtx.TestSetAt(i, j, isAI);
+			if(!testSetResult.setSuccess)
+			{
+				System.out.println("TestSetAt逻辑错误！！");
+			}
+			
+			int score = 0;
+			// 只有游戏还没结束，才继续搜索
+			if(testSetResult.gameIsEnd == false) 
+			{
+				// 得到当前局面的缓存分数
+//				long boardHashCode = m_stCtx.GetBoardHashCode();
+//				PlayerColor nowColor = isAI ? m_stCtx.GetAIColor() : m_stCtx.GetGamerColor();
+//				ScoreNode scoreNode = Zobrist.Instance().GetScoreNodeByHashCode(boardHashCode, nowColor);
+//				int _boardDep = m_stCtx.GetExistChessCnt() + (MAX_DFS_LEN - dep);
+//				if(scoreNode != null && _boardDep <= scoreNode.dep) 
+//				{
+//					score = scoreNode.score;
+//				}
+//				else 
+//				{
+//					if(dep > MAX_DFS_LEN) 
+//					{
+//						score = -ScoreEvaluator.Instance().GetBoardScore(isAI);
+//					}
+//					else 
+//					{
+//						score = -alpha_beta(-localBeta, -localAlpha, dep + 1, !isAI);
+//					}
+//					Zobrist.Instance().SetScoreNodeByHashCode(boardHashCode, nowColor, score, _boardDep);
+//				}
+				
+				if(dep >= MAX_DFS_LEN) 
+				{
+					score = -ScoreEvaluator.Instance().GetBoardScore(isAI);
+				}
+				else 
+				{
+//					score = -alpha_beta(-localBeta, -localAlpha, dep + 1, !isAI);
+					
+					// pvs
+					score = -alpha_beta(-localAlpha-1, -localAlpha, dep + 1, !isAI);
+					if(score > localAlpha) 
+					{
+						localAlpha = score;
+						if(score < localBeta) 
+						{
+							// 不会被剪枝
+							score = -alpha_beta(-localBeta, -localAlpha, dep + 1, !isAI);
+						} 
+					}
+				}
+			}
+			else 
+			{
+				// TODO.. 这里逻辑可能有问题
+				score = ScoreEvaluator.Instance().GetBoardScore(isAI) * (isAI ? 1 : -1);
+			}
+			
+			// 取消这个位置的棋子
+			if(!m_stCtx.UnsetAt(i, j))
+			{
+				System.out.println("UnsetAt逻辑错误！！");
+			}
+			
+			if(score >= localBeta) 
+			{
+				// cut
+				return score;
+			}
+			if(score > best_value) 
+			{
+				best_value = score;
+				if(dep == 0)
+				{
+					setX = i;
+					setY = j;
+				}
+				
+				if(score > localAlpha) 
+				{
+					localAlpha = score;
+				}
+			}
+		}
+		
+		// 归还节点
+		for (DFSNode dfsNode : nodeList) 
+		{
+			m_arrNodePool.CheckIn(dfsNode);
+		}
+		
+		// 返回最佳结果
+		return best_value;
+	}
+	
 	private DFSNodePool m_arrNodePool = new DFSNodePool();
-	private List<DFSNode> m_arrDFSNodeList = new ArrayList<>();
 	private int setX = -1;
 	private int setY = -1;
 	private int alpha = 0;
