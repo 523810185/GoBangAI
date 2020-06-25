@@ -226,7 +226,7 @@ public class GoBang {
 	 * 游戏过程中   玩家下棋
 	 */
 	public boolean put(int x, int y) {
-		return Board.Instance().GamerPutAt(x, y);
+		return Board.Instance().PutChessAt(x, y);
 	}
 	
 	/**

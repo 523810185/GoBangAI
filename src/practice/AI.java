@@ -41,7 +41,7 @@ public class AI
 			
 			if(m_stCtx.GetExistChessCnt() == 0) 
 			{
-				m_stCtx.AIPutAt(7, 7);
+				m_stCtx.PutChessAt(7, 7);
 				return;
 			}
 			
@@ -70,7 +70,7 @@ public class AI
 			}
 			else 
 			{
-				m_stCtx.AIPutAt(setX, setY);
+				m_stCtx.PutChessAt(setX, setY);
 			}
 		}
 	}
@@ -207,7 +207,7 @@ public class AI
 			}
 			
 			// 尝试在这个位置下棋
-			TestSetResult testSetResult = m_stCtx.TestSetAt(i, j, isMaxNode);
+			TestSetResult testSetResult = m_stCtx.TestSetAt(i, j);
 			if(!testSetResult.setSuccess)
 			{
 				System.out.println("TestSetAt逻辑错误！！");
@@ -404,7 +404,7 @@ public class AI
 			}
 			
 			// 尝试在这个位置下棋
-			TestSetResult testSetResult = m_stCtx.TestSetAt(i, j, isAI);
+			TestSetResult testSetResult = m_stCtx.TestSetAt(i, j);
 			if(!testSetResult.setSuccess)
 			{
 				System.out.println("TestSetAt逻辑错误！！");

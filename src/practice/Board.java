@@ -96,9 +96,8 @@ public class Board
 	 * 搜索中供调用的方法
 	 * @param x
 	 * @param y
-	 * @param isAI
-	 */
-	public TestSetResult TestSetAt(int x, int y, boolean isAI)
+s	 */
+	public TestSetResult TestSetAt(int x, int y)
 	{
 		TestSetResult result = new TestSetResult();
 		result.setSuccess = result.gameIsEnd = false;
@@ -107,11 +106,11 @@ public class Board
 			return result;
 		}
 		
-		PlayerColor color = isAI ? m_eAIColor : this.GetOppositeColor(m_eAIColor);
+		PlayerColor color = m_eNowColor;
 		PutChessInner(x, y, color);
 		
 		result.setSuccess = true;
-		result.gameIsEnd = this.IsEndInner(color, true);
+		result.gameIsEnd = this.IsEndInner(color);
 		return result;
 	}
 	
@@ -173,49 +172,36 @@ public class Board
 		m_lBoardHash = 0;
 	}
 	
-	public boolean GamerPutAt(int x, int y) 
+	/**
+	 * 下棋到某一个位置
+	 * @param x
+	 * @param y
+	 * @return
+	 */
+	public boolean PutChessAt(int x, int y) 
 	{
 		if(!IsEmptyPos(x, y))
 		{
 			return false;
 		}
 		
-		if(IsAIPlay())
+		PlayerColor nowColor = m_eNowColor;
+		PutChessInner(x, y, nowColor);
+		if(IsEndInner(nowColor))
 		{
-			return false;
-		}
-		
-		PutChessInner(x, y, m_eNowColor);
-		if(!IsEndInner(m_eNowColor, false))
-		{
-			SwapNowColor();
-			AI.Instance().DoMove();
+			m_bGameIsEnd = true;
+			m_eWinnerColor = nowColor;
+			GoBang.Instance().end();
 		}
 		else 
 		{
-			System.out.println(" On End Game " + x + ",," + y + ".." + m_eNowColor + " ,, " + ColorToChar(m_eNowColor));
-			
-			GoBang.Instance().end();
-		}
-		return true;
-	}
-	
-	public boolean AIPutAt(int x, int y) 
-	{
-		if(!IsAIPlay()) 
-		{
-			return false;
+			PlayerColor nxtColor = m_eNowColor; // 这里已经SwapColor了，所以是nxtColor
+			if(nxtColor == m_eAIColor) 
+			{
+				AI.Instance().DoMove();
+			}
 		}
 		
-		PutChessInner(x, y, m_eAIColor);
-		if(!IsEndInner(m_eAIColor, false))
-		{
-			SwapNowColor();
-		}
-		else 
-		{
-			GoBang.Instance().end();
-		}
 		return true;
 	}
 	
@@ -236,6 +222,7 @@ public class Board
 			m_stBoard[x][y] = this.ColorToChar(color);
 			m_lBoardHash = Zobrist.Instance().AppendHashCode(m_lBoardHash, x, y, color);
 			m_iExistChessCnt++;
+			SwapNowColor();
 		}
 	}
 	
@@ -255,6 +242,7 @@ public class Board
 			m_lBoardHash = Zobrist.Instance().UnAppendHashCode(m_lBoardHash, x, y, CharToColor(m_stBoard[x][y]));
 			m_stBoard[x][y] = '0';
 			m_iExistChessCnt--;
+			SwapNowColor();
 		}
 	}
 	
@@ -287,7 +275,7 @@ public class Board
 	/**
 	 * 判断 当最后一步棋放入完成后是否是五部成棋
 	 */
-	private boolean IsEndInner(Board.PlayerColor color, boolean isInDFS) 
+	private boolean IsEndInner(Board.PlayerColor color) 
 	{
 		char c = ColorToChar(color);
 		
@@ -329,11 +317,6 @@ public class Board
 //							System.out.println("?? " + _xxx + " " + _yyy + " " + m_stBoard[_xxx][_yyy]);
 //						}
 						
-						if(!isInDFS)
-						{
-							m_bGameIsEnd = true;
-							m_eWinnerColor = color;
-						}
 						return true;
 					}
 				}
