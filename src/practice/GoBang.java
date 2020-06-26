@@ -50,6 +50,8 @@ public class GoBang {
 	private JMenuItem exit = new JMenuItem("ÍË³ö");
 	private JMenuItem chooseAIColorToBlack = new JMenuItem("ÈÃAIÖ´ºÚ"); 
 	private JMenuItem chooseAIColorToWhite = new JMenuItem("ÈÃAIÖ´°×"); 
+	private JMenuItem stopAI = new JMenuItem("Í£Ö¹AI");
+	private JMenuItem startAI = new JMenuItem("¿ªÆôAI");
 
 	// ÆåÅÌ ºÚÆå °×Æå ¹â±ê
 	private Image board;
@@ -98,6 +100,9 @@ public class GoBang {
 		choice.addSeparator();
 		choice.add(chooseAIColorToBlack);
 		choice.add(chooseAIColorToWhite);
+		choice.addSeparator();
+		choice.add(stopAI);
+		choice.add(startAI);
 		
 		jmb.add(choice);
 		jf.setJMenuBar(jmb);
@@ -134,6 +139,20 @@ public class GoBang {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				Board.Instance().SetAIColor(PlayerColor.White);
+			}
+		});
+		
+		stopAI.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				AI.Instance().SetUseAI(false);
+			}
+		});
+		
+		startAI.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				AI.Instance().SetUseAI(true);
 			}
 		});
 		

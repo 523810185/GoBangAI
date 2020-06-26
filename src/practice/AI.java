@@ -531,12 +531,27 @@ public class AI
 		return System.currentTimeMillis() - m_lStartTimeMillis >= MAX_DFS_TIME_MILLIS;
 	}
 	
+	/**
+	 * 设置AI的开关
+	 * @param useAI
+	 */
+	public void SetUseAI(boolean useAI) 
+	{
+		m_bUseAI = useAI;
+	}
+	
 	private long m_lStartTimeMillis = 0;
+	private boolean m_bUseAI = true;
 	/**
 	 * AI下棋
 	 */
 	public void DoMove()
 	{
+		if(!m_bUseAI) 
+		{
+			return;
+		}
+		
 		this.Init();
 		new AIThread().start();
 	}
