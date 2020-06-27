@@ -32,10 +32,10 @@ public class ScoreEvaluator
 	}
 	public static final int MAX = 100000000;
 	public static final int MIN = -MAX;
-	private static final int GO_FIVE_SCORE = 10000000; 
-	private static final int LIVE_FOUR_SCORE = 100000;
+	public static final int GO_FIVE_SCORE = 10000000; 
+	public static final int LIVE_FOUR_SCORE = 100000;
 	private static final int CHONG_FOUR_SCORE = 10000;
-	private static final int LIVE_THREE_SCORE = 10000;
+	public static final int LIVE_THREE_SCORE = 10000;
 	private static final int SLEEP_THREE_SCORE = 500;
 	private static final int LIVE_TWO_SCORE = 20;
 	private static final int SLEEP_TWO_SCORE = 10; 
@@ -72,6 +72,7 @@ public class ScoreEvaluator
 					boolean useEmptyChance = false;
 					int _RX = -1; // 最右边的一个同色
 					int _RY = -1;
+					int _LContinueCnt = 0, _RContinueCnt = 0; // 如果有空格，左右分别有几个
 					for(int step=1;step<9;step++) 
 					{
 						int _testX = i + _dirX * step;
@@ -106,6 +107,15 @@ public class ScoreEvaluator
 							m_arrVisRecorder[_testX][_testY] = k;
 							_RX = _testX;
 							_RY = _testY;
+							
+							if(useEmptyChance) 
+							{
+								_RContinueCnt++;
+							}
+							else 
+							{
+								_LContinueCnt++;
+							}
 						}
 						else 
 						{
@@ -126,6 +136,37 @@ public class ScoreEvaluator
 					{
 						if(useEmptyChance) 
 						{
+							if(_LoneIsEmpty) 
+							{
+								if(_LContinueCnt >= 5) 
+								{
+									score += GO_FIVE_SCORE * rate;
+								}
+								else if(_LContinueCnt == 4) 
+								{
+									score += LIVE_FOUR_SCORE * rate;
+								}
+								else if(_LContinueCnt == 3) 
+								{
+									score += LIVE_THREE_SCORE * rate;
+								}
+							}
+							else if(_RoneIsEmpty) 
+							{
+								if(_RContinueCnt >= 5) 
+								{
+									score += GO_FIVE_SCORE * rate;
+								}
+								else if(_RContinueCnt == 4) 
+								{
+									score += LIVE_FOUR_SCORE * rate;
+								}
+								else if(_RContinueCnt == 3) 
+								{
+									score += LIVE_THREE_SCORE * rate;
+								}
+							}
+							
 							score += CHONG_FOUR_SCORE * rate;
 						}
 						else 

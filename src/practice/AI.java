@@ -61,7 +61,79 @@ public class AI
 			
 //			MTDF(alpha, beta, 0, 0);
 			
-			alpha_beta(alpha, beta, 0, true);
+			m_lStartTimeMillis = System.currentTimeMillis();
+			m_bCalcKillSucc = false;
+			for(int killLen = 1; MAX_KILL_LEN - killLen >= 0; killLen += 2) 
+			{
+				System.out.println("算杀层数：" + killLen);
+				if(System.currentTimeMillis() - m_lStartTimeMillis >= MAX_DFS_TIME_MILLIS) 
+				{
+					System.out.println("在层数X超时算杀：" + killLen);
+					break;
+				}
+				
+				m_iDFSLowestDep = MAX_KILL_LEN - killLen;
+				int lastVal = CalcKill(alpha, beta, m_iDFSLowestDep, true);
+				if(lastVal >= ScoreEvaluator.LIVE_THREE_SCORE * 2 - 1000) 
+				{
+					// win
+					break;
+				}
+			}
+			
+			long currentTime = System.currentTimeMillis();
+			System.out.println("算杀时间：" + (currentTime - m_lStartTimeMillis) / 1000f + "..算杀成功？" + m_bCalcKillSucc);
+			// 算杀失败，继续搜索
+			if(m_bCalcKillSucc == false) 
+			{
+				m_lStartTimeMillis = currentTime; // 重置时间
+				
+				// 迭代加深搜索
+				int lastVal = ScoreEvaluator.MIN;
+				for(int dfsLen = 1; MAX_DFS_LEN - dfsLen >= 0; dfsLen += 2)
+				{
+					if(IsOutOfTime()) 
+					{
+						break;
+					}
+					
+					// 设置最低深度
+					m_iDFSLowestDep = MAX_DFS_LEN - dfsLen;
+					if(lastVal != ScoreEvaluator.MIN) 
+					{
+						int _tempDelta = 5;
+						alpha = Math.max(ScoreEvaluator.MIN, lastVal - _tempDelta);
+						beta = Math.min(ScoreEvaluator.MAX, lastVal + _tempDelta);
+						// AS
+						int _asTestVal = alpha_beta(alpha, beta, m_iDFSLowestDep, true);
+						if(_asTestVal <= alpha) 
+						{
+							beta = alpha;
+							alpha = ScoreEvaluator.MIN;
+						}
+						else if(_asTestVal >= beta) 
+						{
+							alpha = beta;
+							beta = ScoreEvaluator.MAX;
+						}
+						else 
+						{
+							lastVal = _asTestVal;
+							continue;
+						}
+					}
+					lastVal = alpha_beta(alpha, beta, m_iDFSLowestDep, true);
+					
+					if(lastVal >= ScoreEvaluator.LIVE_FOUR_SCORE / 2) 
+					{
+						// 已经赢了，不再继续搜索
+						break;
+					}
+				}
+			}
+			
+//			m_iDFSLowestDep = 0;
+//			int score = alpha_beta(alpha, beta, m_iDFSLowestDep, true);
 			
 			AfterAISetChess();
 			if(!m_stCtx.IsEmptyPos(setX, setY))
@@ -166,7 +238,6 @@ public class AI
 			}
 		});
 		
-		
 		boolean haveAtLeastOneNodeCanUse = false;
 		for (DFSNode node : nodeList) 
 		{
@@ -245,7 +316,56 @@ public class AI
 //					break;
 //				}
 				
-				dfsRes = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
+				// pvs
+				int _testL = !isMaxNode ? localBeta - 1 : localAlpha;
+				int _testR = !isMaxNode ? localBeta : localAlpha + 1;
+				dfsRes = DFS(dep + 1, !isMaxNode, _testL, _testR);
+//				if(dfsRes.score > localAlpha && dfsRes.score < localBeta) 
+//				{
+//					// 其实这里根据min-max节点会有个分类讨论，但是最终表达式都是这一个
+//					// 表示分数有效并且不会被剪枝，展开pvs
+//					dfsRes = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
+//				}
+				if(isMaxNode) 
+				{
+					if(dfsRes.score > localAlpha) 
+					{
+						// 第0层，记录下棋位置
+						if(dep == m_iDFSLowestDep)
+						{
+							setX = i;
+							setY = j;
+						}
+						
+						localAlpha = dfsRes.score;
+						if(dfsRes.score < localBeta) 
+						{
+							// 不会被剪枝
+							dfsRes = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
+						}
+					}
+				}
+				else 
+				{
+					if(dfsRes.score < localBeta) 
+					{
+						// 第0层，记录下棋位置
+						if(dep == m_iDFSLowestDep)
+						{
+							setX = i;
+							setY = j;
+						}
+						
+						localBeta = dfsRes.score;
+						if(dfsRes.score > localAlpha) 
+						{
+							// 不会被剪枝
+							dfsRes = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
+						}
+					}
+				}
+				
+//				dfsRes = DFS(dep + 1, !isMaxNode, localAlpha, localBeta);
 			}
 			else 
 			{
@@ -348,6 +468,11 @@ public class AI
 	private int alpha_beta(int localAlpha, int localBeta, int dep, boolean isAI){
 		// 当前最佳分值，预设为负无穷大
 		int best_value = ScoreEvaluator.MIN;
+		if(IsOutOfTime()) 
+		{
+			return best_value;
+		}
+		
 		// 启发式搜索
 		List<DFSNode> nodeList = new ArrayList<>();
 		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
@@ -372,8 +497,16 @@ public class AI
 			}
 		});
 		
+		boolean isFirstTry = true;
 		for (DFSNode node : nodeList) 
 		{
+			if(IsOutOfTime()) 
+			{
+//				return best_value;
+				break;
+				// 不能直接return是因为需要先归还pool中的节点
+			}
+
 			int i = node.x;
 			int j = node.y;
 			if(!m_stCtx.IsEmptyPos(i, j))
@@ -409,6 +542,13 @@ public class AI
 			{
 				System.out.println("TestSetAt逻辑错误！！");
 			}
+			
+//			try {
+//				Thread.sleep(1000);
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 			
 			int score = 0;
 			// 只有游戏还没结束，才继续搜索
@@ -455,6 +595,21 @@ public class AI
 							score = -alpha_beta(-localBeta, -localAlpha, dep + 1, !isAI);
 						} 
 					}
+					
+					// pvs 2
+//					if(isFirstTry) 
+//					{
+//						isFirstTry = false;
+//						score = -alpha_beta(-localBeta, -localAlpha, dep + 1, !isAI);
+//					}
+//					else 
+//					{
+//						score = -alpha_beta(-localAlpha-1, -localAlpha, dep + 1, !isAI);
+//						if(localAlpha < score && score < localBeta) 
+//						{
+//							score = -alpha_beta(-localBeta, -localAlpha, dep + 1, !isAI);
+//						}
+//					}
 				}
 			}
 			else 
@@ -469,18 +624,186 @@ public class AI
 				System.out.println("UnsetAt逻辑错误！！");
 			}
 			
+			boolean isCut = false;
 			if(score >= localBeta) 
 			{
 				// cut
-				return score;
+//				return score;
+				isCut = true;
 			}
 			if(score > best_value) 
 			{
 				best_value = score;
-				if(dep == 0)
+				if(isCut) 
+				{
+					// 不能直接return是为了归还节点到pool中
+					break;
+				}
+				
+				if(dep == m_iDFSLowestDep)
 				{
 					setX = i;
 					setY = j;
+				}
+				
+				if(score > localAlpha) 
+				{
+					localAlpha = score;
+				}
+			}
+		}
+		
+		// 归还节点
+		for (DFSNode dfsNode : nodeList) 
+		{
+			m_arrNodePool.CheckIn(dfsNode);
+		}
+		
+		// 返回最佳结果
+		return best_value;
+	}
+	
+	private boolean m_bCalcKillSucc = false;
+	private static final int MAX_KILL_LEN = 12;
+	private int CalcKill(int localAlpha, int localBeta, int dep, boolean isAI) 
+	{
+		int best_value = ScoreEvaluator.MIN;
+		// 启发式搜索
+		List<DFSNode> nodeList = new ArrayList<>();
+		for(int _1=0;_1<SEARCH_ARRAY.length;_1++) 
+		{
+			for(int _2=0;_2<SEARCH_ARRAY.length;_2++) 
+			{
+				int i = SEARCH_ARRAY[_1];
+				int j = SEARCH_ARRAY[_2];
+				if(m_stCtx.IsEmptyPos(i, j)) 
+				{
+					int thisScore = ScoreEvaluator.Instance().GetScoreAtPos(i, j, true);
+					if(thisScore >= ScoreEvaluator.LIVE_THREE_SCORE) 
+					{
+						// 只考虑高分点
+						nodeList.add(m_arrNodePool.CheckOut().SetX(i).SetY(j).SetScore(thisScore));
+					}
+				}
+			}
+		}
+		nodeList.sort(new Comparator<DFSNode>() {
+			@Override
+			public int compare(DFSNode o1, DFSNode o2) {
+				float dt = o1.score - o2.score;
+				if(dt < -0.001f) return 1;
+				if(dt > 0.001f) return -1;
+				return 0;
+			}
+		});
+		
+		for (DFSNode node : nodeList) 
+		{
+			int i = node.x;
+			int j = node.y;
+			if(!m_stCtx.IsEmptyPos(i, j))
+			{
+				continue;
+			}
+			
+			boolean _isEmptyAround = true;
+			for(int _tx=-1;_tx<=1;_tx++) 
+			{
+				for(int _ty=-1;_ty<=1;_ty++) 
+				{
+					if(_tx == 0 && _ty == 0) 
+					{
+						continue;
+					}
+					
+					if(m_stCtx.IsValidPos(i+_tx, j+_ty) && m_stCtx.IsEmptyPos(i+_tx, j+_ty) == false)
+					{
+						_isEmptyAround = false;
+						break;
+					}
+				}
+			}
+			if(_isEmptyAround) 
+			{
+				continue;
+			}
+			
+			if(IsOutOfTime()) 
+			{
+				break;
+			}
+			
+			// 尝试在这个位置下棋
+			TestSetResult testSetResult = m_stCtx.TestSetAt(i, j);
+			if(!testSetResult.setSuccess)
+			{
+				System.out.println("TestSetAt逻辑错误！！");
+			}
+			
+			int score = 0;
+			// 只有游戏还没结束，才继续搜索
+			if(testSetResult.gameIsEnd == false) 
+			{
+				if(dep >= MAX_KILL_LEN) 
+				{
+					score = -ScoreEvaluator.Instance().GetBoardScore(isAI);
+				}
+				else 
+				{
+					score = -CalcKill(-localBeta, -localAlpha, dep + 1, !isAI);
+					
+					// pvs
+//					score = -alpha_beta(-localAlpha-1, -localAlpha, dep + 1, !isAI);
+//					if(score > localAlpha) 
+//					{
+//						localAlpha = score;
+//						if(score < localBeta) 
+//						{
+//							// 不会被剪枝
+//							score = -alpha_beta(-localBeta, -localAlpha, dep + 1, !isAI);
+//						} 
+//					}
+					
+				}
+			}
+			else 
+			{
+				// TODO.. 这里逻辑可能有问题
+				score = ScoreEvaluator.Instance().GetBoardScore(isAI) * (isAI ? 1 : -1);
+			}
+			
+			// 取消这个位置的棋子
+			if(!m_stCtx.UnsetAt(i, j))
+			{
+				System.out.println("UnsetAt逻辑错误！！");
+			}
+			
+			boolean isCut = false;
+			if(score >= localBeta) 
+			{
+				// cut
+//				return score;
+				isCut = true;
+			}
+			if(score > best_value) 
+			{
+				best_value = score;
+				if(isCut) 
+				{
+					// 不能直接return是为了归还节点到pool中
+					break;
+				}
+				
+				if(dep == m_iDFSLowestDep)
+				{
+					if(score >= ScoreEvaluator.LIVE_THREE_SCORE * 2 - 1000) 
+					{
+						// win
+						setX = i;
+						setY = j;
+						m_bCalcKillSucc = true;
+						break;
+					}
 				}
 				
 				if(score > localAlpha) 
@@ -520,6 +843,7 @@ public class AI
 	private void AfterAISetChess()
 	{
 		System.out.println("使用的时间为：" + (System.currentTimeMillis() - m_lStartTimeMillis) / 1000f);
+		allTime += (System.currentTimeMillis() - m_lStartTimeMillis);
 	}
 	
 	/**
@@ -540,6 +864,7 @@ public class AI
 		m_bUseAI = useAI;
 	}
 	
+	public long allTime = 0; // for test
 	private long m_lStartTimeMillis = 0;
 	private boolean m_bUseAI = true;
 	/**

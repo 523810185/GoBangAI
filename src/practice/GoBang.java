@@ -265,6 +265,8 @@ public class GoBang {
 		}else {
 			JOptionPane.showMessageDialog(null, "ºÚÆåÓ®");
 		}
+		
+		System.out.println("All Time : " + AI.Instance().allTime);
 	}
 	
 	/**
