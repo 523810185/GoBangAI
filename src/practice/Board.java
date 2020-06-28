@@ -77,14 +77,14 @@ public class Board
 		return m_stBoard[x1][y1] == m_stBoard[x2][y2];
 	}
 	
-	public boolean IsAIColorAtPos(int x, int y) 
+	public boolean IsSameColor(int x, int y, PlayerColor color) 
 	{
-		if(!IsValidPos(x, y) || IsEmptyPos(x, y)) 
+		if(!IsValidPos(x, y) || IsEmptyPos(x, y) || color == null) 
 		{
 			return false;
 		}
 		
-		return ColorToChar(m_eAIColor) == m_stBoard[x][y];
+		return ColorToChar(color) == m_stBoard[x][y];
 	}
 	
 	public class TestSetResult 

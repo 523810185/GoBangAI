@@ -676,14 +676,25 @@ public class AI
 			{
 				int i = SEARCH_ARRAY[_1];
 				int j = SEARCH_ARRAY[_2];
-				if(m_stCtx.IsEmptyPos(i, j)) 
+				boolean add = false;
+				PlayerColor _aiColor = m_stCtx.GetAIColor();
+				PlayerColor _gamerColor = m_stCtx.GetGamerColor();
+				KillCalculator _kill = KillCalculator.Instance();
+				if(isAI && _kill.IsKillPoint(i, j, _aiColor)) 
 				{
-					int thisScore = ScoreEvaluator.Instance().GetScoreAtPos(i, j, true);
-					if(thisScore >= ScoreEvaluator.LIVE_THREE_SCORE) 
-					{
-						// 只考虑高分点
-						nodeList.add(m_arrNodePool.CheckOut().SetX(i).SetY(j).SetScore(thisScore));
-					}
+					// 电脑考虑自己的杀点
+					add = true;
+				}
+				else if(!isAI && (_kill.IsKillPoint(i, j, _aiColor) || _kill.IsKillPoint(i, j, _gamerColor))) 
+				{
+					// 电脑考虑自己和对方的杀点
+					add = true;
+				}
+				
+				if(add) 
+				{
+					// TODO.. 这里使用GetScoreAtPos不太准确，因为这个函数本身不太准确，会导致着法排序不是最优的
+					nodeList.add(m_arrNodePool.CheckOut().SetScore(ScoreEvaluator.Instance().GetScoreAtPos(i, j, isAI)).SetX(i).SetY(j));
 				}
 			}
 		}

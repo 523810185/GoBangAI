@@ -124,7 +124,7 @@ public class ScoreEvaluator
 					}
 					
 					// Ëã·Ö
-					boolean isAIColor = ctx.IsAIColorAtPos(i, j);
+					boolean isAIColor = ctx.IsSameColor(i, j, ctx.GetAIColor());
 					int _LoneX = i - _dirX;
 					int _LoneY = j - _dirY;
 					int _RoneX = _RX + _dirX;
